@@ -5,17 +5,17 @@ frameworks:
   - id: ux-contract-dev
     name: UX Contract Framework
     description: UX駆動開発向け。画面設計→詳細設計→実装の流れ
-    repo_url: https://github.com/pritzcrkers/ux-contract-dev
+    repo_url: https://github.com/R1tzKrackers/ux-contract-dev
     tags: [web, frontend, ux]
 
   - id: api-contract-dev
     name: API Contract Framework
     description: API駆動開発向け。スキーマ設計→実装→テストの流れ
-    repo_url: https://github.com/pritzcrkers/api-contract-dev
+    repo_url: https://github.com/R1tzKrackers/api-contract-dev
     tags: [api, backend]
 
   - id: cli-contract-dev
     name: CLI Contract Framework
     description: CLI開発向け。コマンド設計→実装→ヘルプ生成の流れ
-    repo_url: https://github.com/pritzcrkers/cli-contract-dev
+    repo_url: https://github.com/R1tzKrackers/cli-contract-dev
     tags: [cli, tool]
