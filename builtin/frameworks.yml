@@ -19,3 +19,9 @@ frameworks:
     description: CLI開発向け。コマンド設計→実装→ヘルプ生成の流れ
     repo_url: https://github.com/R1tzKrackers/cli-contract-dev
     tags: [cli, tool]
+
+  - id: spa-contract-dev
+    name: SPA Contract Framework
+    description: SPA開発向け。コンポーネント設計→状態管理→実装の流れ
+    repo_url: https://github.com/R1tzKrackers/spa-contract-dev
+    tags: [spa, frontend, react]
