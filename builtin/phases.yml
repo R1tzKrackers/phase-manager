@@ -1,0 +1,15 @@
+# Phase Manager - Built-in Phases
+# These phases are used before a framework is installed
+
+phases:
+  - id: 00-framework-init
+    name: フレームワークイニシャライズ
+    description: プロジェクト構想をヒアリングし、最適なフレームワークを選択
+    prompt: prompts/00-framework-init.md
+    next: [00-framework-setup]
+
+  - id: 00-framework-setup
+    name: フレームワークセットアップ
+    description: 選択したフレームワークをサブモジュールとして追加
+    prompt: prompts/00-framework-setup.md
+    next: []  # フレームワーク固有フェーズへ移行

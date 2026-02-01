@@ -1,0 +1,3061 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Phase Manager</title>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tocbot/dist/tocbot.min.js"></script>
+  <script src="https://unpkg.com/@popperjs/core@2"></script>
+  <script src="https://unpkg.com/tippy.js@6"></script>
+  <link rel="stylesheet" href="https://unpkg.com/tippy.js@6/animations/shift-away.css">
+  <style>
+    :root {
+      --bg-primary: #0d1117;
+      --bg-secondary: #161b22;
+      --bg-tertiary: #21262d;
+      --border-color: #30363d;
+      --text-primary: #f0f6fc;
+      --text-secondary: #8b949e;
+      --text-muted: #6e7681;
+      --accent-blue: #58a6ff;
+      --accent-green: #3fb950;
+      --accent-yellow: #d29922;
+      --accent-purple: #a371f7;
+      --accent-red: #f85149;
+      --accent-orange: #f0883e;
+      --shadow: 0 8px 24px rgba(0,0,0,0.4);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      height: 100%;
+      overflow: hidden;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans JP', sans-serif;
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Icons - React Icons (Feather) SVG paths */
+    .icon {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      fill: none;
+      flex-shrink: 0;
+    }
+
+    .icon-sm { width: 16px; height: 16px; }
+    .icon-lg { width: 20px; height: 20px; }
+    .icon-xl { width: 24px; height: 24px; }
+
+    /* Header */
+    .header {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border-color);
+      padding: 16px 32px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      -webkit-backdrop-filter: blur(12px);
+      backdrop-filter: blur(12px);
+    }
+
+    .header-content {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 40px;
+      height: 40px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-text {
+      font-size: 18px;
+      font-weight: 600;
+      letter-spacing: -0.5px;
+    }
+
+    .logo-sub {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 1px;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      margin-left: 32px;
+    }
+
+    .tab {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .tab:hover {
+      color: var(--text-primary);
+      background: var(--bg-tertiary);
+    }
+
+    .tab.active {
+      color: var(--text-primary);
+      background: var(--bg-tertiary);
+      border-color: var(--border-color);
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 24px;
+      background: var(--border-color);
+      margin: 0 8px;
+    }
+
+    /* Buttons */
+    .btn {
+      padding: 8px 16px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-color);
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      background: var(--bg-secondary);
+      border-color: var(--text-muted);
+      transform: translateY(-1px);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+
+    .btn-icon {
+      padding: 8px;
+      border-radius: 50%;
+    }
+
+    .btn-primary {
+      background: var(--accent-blue);
+      border-color: var(--accent-blue);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background: #4c9aed;
+      border-color: #4c9aed;
+    }
+
+    .btn-success {
+      background: var(--accent-green);
+      border-color: var(--accent-green);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background: #2ea043;
+      border-color: #2ea043;
+    }
+
+    .btn-warning {
+      background: var(--accent-yellow);
+      border-color: var(--accent-yellow);
+      color: var(--bg-primary);
+    }
+
+    .btn-danger {
+      background: transparent;
+      border-color: var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    .btn-danger:hover {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    .btn-shutdown {
+      background: transparent;
+      border-color: var(--accent-orange);
+      color: var(--accent-orange);
+    }
+
+    .btn-shutdown:hover {
+      background: var(--accent-orange);
+      color: var(--bg-primary);
+    }
+
+    /* Main Content */
+    .main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 24px 32px;
+      overflow: hidden;
+    }
+
+    /* Progress Section */
+    .progress-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-title {
+      font-size: 12px;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-stats {
+      font-size: 20px;
+      font-weight: 600;
+    }
+
+    .progress-bar-container {
+      height: 6px;
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+      border-radius: 3px;
+      transition: width 0.5s ease;
+    }
+
+    /* Action Panel */
+    .action-panel {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+
+    .action-panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }
+
+    .action-panel-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .action-panel-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .action-panel-badge.claude {
+      background: rgba(163, 113, 247, 0.15);
+      color: var(--accent-purple);
+    }
+
+    .action-panel-badge.codex {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    /* Phase Groups */
+    .phase-group {
+      margin-bottom: 20px;
+    }
+
+    .phase-group-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin-bottom: 10px;
+      padding-left: 4px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Phase Cards */
+    .phase-cards {
+      display: grid;
+      gap: 10px;
+    }
+
+    .phase-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .phase-card::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 3px;
+      background: var(--border-color);
+      transition: var(--transition);
+    }
+
+    .phase-card:hover {
+      border-color: var(--text-muted);
+      transform: translateX(4px);
+    }
+
+    .phase-card.current {
+      border-color: var(--accent-blue);
+      background: rgba(88, 166, 255, 0.05);
+    }
+
+    .phase-card.current::before {
+      background: var(--accent-blue);
+    }
+
+    .phase-card.completed {
+      opacity: 0.7;
+    }
+
+    .phase-card.completed::before {
+      background: var(--accent-green);
+    }
+
+    .phase-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 6px;
+    }
+
+    .phase-id {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+
+    .phase-tool {
+      font-size: 10px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .phase-tool.claude {
+      background: rgba(163, 113, 247, 0.15);
+      color: var(--accent-purple);
+    }
+
+    .phase-tool.codex {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .phase-name {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+
+    .phase-status {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--text-secondary);
+    }
+
+    .status-icon {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+    }
+
+    .status-icon.pending {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+
+    .status-icon.current {
+      background: var(--accent-blue);
+      color: white;
+      animation: pulse 2s infinite;
+    }
+
+    .status-icon.completed {
+      background: var(--accent-green);
+      color: white;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.7; transform: scale(0.95); }
+    }
+
+    /* Artifacts */
+    .artifacts {
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .artifact-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-bottom: 3px;
+    }
+
+    .artifact-icon.exists { color: var(--accent-green); }
+    .artifact-icon.missing { color: var(--accent-red); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      opacity: 0;
+      visibility: hidden;
+      transition: var(--transition);
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .modal {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow: hidden;
+      transform: scale(0.9) translateY(20px);
+      transition: var(--transition);
+    }
+
+    .modal-overlay.active .modal {
+      transform: scale(1) translateY(0);
+    }
+
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-title {
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .modal-close {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg-tertiary);
+      color: var(--text-secondary);
+      cursor: pointer;
+      font-size: 18px;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      background: var(--accent-red);
+      color: white;
+    }
+
+    .modal-body {
+      padding: 20px;
+      max-height: 50vh;
+      overflow-y: auto;
+    }
+
+    .prompt-content {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 12px;
+      line-height: 1.7;
+      white-space: pre-wrap;
+      color: var(--text-secondary);
+    }
+
+    .modal-footer {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      bottom: 80px;
+      right: 24px;
+      z-index: 2000;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .toast {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      box-shadow: var(--shadow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideIn 0.3s ease;
+      font-size: 13px;
+    }
+
+    .toast.success { border-left: 3px solid var(--accent-green); }
+    .toast.error { border-left: 3px solid var(--accent-red); }
+    .toast.info { border-left: 3px solid var(--accent-blue); }
+
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
+    /* Shutdown Confirm */
+    .shutdown-confirm {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .shutdown-confirm h3 {
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .shutdown-confirm p {
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .shutdown-confirm-buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    /* Spinner */
+    .spinner {
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Flow View */
+    .flow-view {
+      display: none;
+    }
+
+    .flow-layout {
+      display: grid;
+      grid-template-columns: 220px 1fr;
+      gap: 24px;
+      height: 100%;
+    }
+
+    .flow-toc {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    /* Custom scrollbar */
+    .flow-toc::-webkit-scrollbar,
+    .flow-content::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .flow-toc::-webkit-scrollbar-track,
+    .flow-content::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+    }
+
+    .flow-toc::-webkit-scrollbar-thumb,
+    .flow-content::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 3px;
+    }
+
+    .flow-toc::-webkit-scrollbar-thumb:hover,
+    .flow-content::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-blue);
+    }
+
+    .flow-toc-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+    }
+
+    /* tocbot styles */
+    .toc-nav .toc-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .toc-nav .toc-list-item {
+      margin-bottom: 2px;
+    }
+
+    .toc-nav a.toc-link {
+      display: block;
+      padding: 6px 10px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      font-size: 13px;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+      transition: var(--transition);
+    }
+
+    .toc-nav a.toc-link:hover {
+      background: var(--bg-tertiary);
+      color: var(--text-primary);
+    }
+
+    .toc-nav a.toc-link.is-active-link {
+      background: rgba(88, 166, 255, 0.1);
+      color: var(--accent-blue);
+      border-left-color: var(--accent-blue);
+    }
+
+    /* ネストされたリスト（h2, h3） */
+    .toc-nav .toc-list .toc-list {
+      padding-left: 12px;
+    }
+
+    .toc-nav .toc-list .toc-list a.toc-link {
+      font-size: 12px;
+      padding: 4px 10px;
+    }
+
+    .toc-nav .toc-list .toc-list .toc-list a.toc-link {
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    @media (max-width: 900px) {
+      .flow-layout {
+        grid-template-columns: 1fr;
+      }
+      .flow-toc {
+        display: none;
+      }
+    }
+
+    .flow-content {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 24px 32px;
+      overflow-y: auto;
+    }
+
+    .flow-content h1 {
+      font-size: 24px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .flow-content h2 {
+      font-size: 20px;
+      margin-top: 24px;
+      margin-bottom: 12px;
+      color: var(--accent-blue);
+    }
+
+    .flow-content h3 {
+      font-size: 16px;
+      margin-top: 20px;
+      margin-bottom: 10px;
+      color: var(--accent-purple);
+    }
+
+    .flow-content p {
+      margin-bottom: 12px;
+      color: var(--text-secondary);
+    }
+
+    .flow-content ul, .flow-content ol {
+      margin-bottom: 12px;
+      padding-left: 24px;
+      color: var(--text-secondary);
+    }
+
+    .flow-content li {
+      margin-bottom: 6px;
+    }
+
+    .flow-content code {
+      background: var(--bg-tertiary);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Consolas', 'Monaco', monospace;
+      font-size: 0.9em;
+      color: var(--accent-yellow);
+    }
+
+    .flow-content pre {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 16px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+    }
+
+    .flow-content pre code {
+      background: transparent;
+      padding: 0;
+      color: var(--text-secondary);
+    }
+
+    .flow-content blockquote {
+      border-left: 3px solid var(--accent-blue);
+      padding-left: 16px;
+      margin: 16px 0;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+
+    .mermaid-diagram {
+      background: var(--bg-primary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      margin: 16px 0;
+      overflow-x: auto;
+      text-align: center;
+    }
+
+    .mermaid-diagram svg {
+      max-width: 100%;
+      height: auto;
+    }
+
+    .flow-content table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+    }
+
+    .flow-content th, .flow-content td {
+      border: 1px solid var(--border-color);
+      padding: 10px 14px;
+      text-align: left;
+    }
+
+    .flow-content th {
+      background: var(--bg-tertiary);
+      font-weight: 600;
+    }
+
+    .workflow-view, .history-view, .phases-view, .settings-view {
+      display: none;
+    }
+
+    .workflow-view.active, .phases-view.active, .settings-view.active {
+      display: block;
+      height: 100%;
+      overflow-y: auto;
+    }
+
+    .flow-view.active, .history-view.active {
+      display: block;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    /* Settings View */
+    .settings-section {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+
+    .settings-section-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text-primary);
+    }
+
+    .settings-section-title .icon {
+      color: var(--text-secondary);
+    }
+
+    .settings-content {
+      color: var(--text-secondary);
+    }
+
+    .settings-content p {
+      margin-bottom: 8px;
+    }
+
+    .settings-content .text-muted {
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    /* Danger Zone */
+    .danger-zone {
+      border-color: rgba(248, 81, 73, 0.4);
+    }
+
+    .danger-zone .settings-section-title {
+      color: var(--accent-red);
+    }
+
+    .danger-zone .settings-section-title .icon {
+      color: var(--accent-red);
+    }
+
+    .danger-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .danger-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .danger-item:first-child {
+      padding-top: 0;
+    }
+
+    .danger-item-info h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .danger-item-info p {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .btn-danger-outline {
+      background: transparent;
+      border: 1px solid var(--accent-red);
+      color: var(--accent-red);
+    }
+
+    .btn-danger-outline:hover {
+      background: rgba(248, 81, 73, 0.1);
+    }
+
+    /* Stepper UI */
+    .stepper {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .stepper-step {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 20px 24px;
+      position: relative;
+    }
+
+    .stepper-step.previous {
+      opacity: 0.6;
+    }
+
+    .stepper-step.current {
+      border-color: var(--accent-blue);
+      background: linear-gradient(135deg, rgba(88, 166, 255, 0.08), rgba(163, 113, 247, 0.05));
+    }
+
+    .stepper-step.current::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 4px;
+      background: linear-gradient(180deg, var(--accent-blue), var(--accent-purple));
+      border-radius: var(--radius) 0 0 var(--radius);
+    }
+
+    .stepper-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stepper-label-icon {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .stepper-label-icon.previous {
+      background: var(--accent-green);
+      color: white;
+    }
+
+    .stepper-label-icon.current {
+      background: var(--accent-blue);
+      color: white;
+      animation: pulse 2s infinite;
+    }
+
+    .stepper-label-icon.next {
+      background: var(--bg-tertiary);
+      color: var(--text-muted);
+    }
+
+    .stepper-phase-name {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .stepper-phase-id {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+
+    .stepper-tool-badge {
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-weight: 500;
+    }
+
+    .stepper-tool-badge.claude {
+      background: rgba(163, 113, 247, 0.15);
+      color: var(--accent-purple);
+    }
+
+    .stepper-tool-badge.codex {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .stepper-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+
+    .stepper-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 0;
+    }
+
+    .stepper-connector svg {
+      color: var(--text-muted);
+    }
+
+    /* Next options */
+    .next-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .next-option {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius);
+      padding: 16px 20px;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .next-option:hover {
+      border-color: var(--accent-blue);
+      transform: translateX(4px);
+    }
+
+    .next-option.ok {
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .next-option.ng {
+      border-left: 3px solid var(--accent-yellow);
+    }
+
+    .next-option-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .next-option-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .next-option-label.ok { color: var(--accent-green); }
+    .next-option-label.ng { color: var(--accent-yellow); }
+
+    .next-option-name {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    .next-option-arrow {
+      color: var(--text-muted);
+    }
+
+    /* History Header */
+    .history-header {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    /* History Timeline - SVG based */
+    .history-timeline {
+      display: grid;
+      grid-template-columns: 24px 1fr;
+      gap: 12px;
+    }
+
+    .history-timeline:has(.history-empty) {
+      display: block;
+    }
+
+    .history-timeline-svg {
+      position: relative;
+    }
+
+    .history-timeline-svg svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 24px;
+      height: 100%;
+    }
+
+    .history-entries {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .history-entry {
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .history-entry-timestamp {
+      font-size: 11px;
+      color: var(--text-muted);
+      padding-top: 14px;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    .history-entry-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+    }
+
+    .history-entry-phase {
+      font-size: 15px;
+      font-weight: 600;
+    }
+
+    .history-entry-status {
+      font-size: 11px;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 500;
+    }
+
+    .history-entry-status.complete {
+      background: rgba(63, 185, 80, 0.15);
+      color: var(--accent-green);
+    }
+
+    .history-entry-status.reject {
+      background: rgba(210, 153, 34, 0.15);
+      color: var(--accent-yellow);
+    }
+
+    .history-entry-comment {
+      font-size: 13px;
+      color: var(--text-secondary);
+      margin-bottom: 4px;
+      max-height: 2.6em;
+      overflow: hidden;
+      position: relative;
+      line-height: 1.3;
+    }
+
+    .history-entry-comment.truncated {
+      cursor: pointer;
+    }
+
+    .history-entry-comment.truncated::after {
+      content: '...';
+      color: var(--accent-blue);
+      font-size: 11px;
+    }
+
+    /* Tippy theme customization */
+    .tippy-box[data-theme~='dark'] {
+      background-color: var(--bg-tertiary);
+      color: var(--text-primary);
+      border: 1px solid var(--border-color);
+      box-shadow: var(--shadow);
+    }
+
+    .tippy-box[data-theme~='dark'] .tippy-arrow {
+      color: var(--bg-tertiary);
+    }
+
+    .tippy-box[data-theme~='dark'] .tippy-content {
+      padding: 12px 16px;
+      font-size: 13px;
+      line-height: 1.5;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .history-entry-meta {
+      font-size: 12px;
+      color: var(--accent-yellow);
+      margin-top: 2px;
+    }
+
+    .history-empty {
+      text-align: center;
+      padding: 48px 24px;
+      color: var(--text-muted);
+    }
+
+    .history-empty svg {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 16px;
+      opacity: 0.5;
+    }
+
+    /* History Scroll Container */
+    .history-scroll-container {
+      height: 100%;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .history-scroll-container::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .history-scroll-container::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+    }
+
+    .history-scroll-container::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 3px;
+    }
+
+    .history-scroll-container::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-blue);
+    }
+
+    /* Custom scrollbar for workflow, phases, and settings views */
+    .workflow-view.active::-webkit-scrollbar,
+    .phases-view.active::-webkit-scrollbar,
+    .settings-view.active::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    .workflow-view.active::-webkit-scrollbar-track,
+    .phases-view.active::-webkit-scrollbar-track,
+    .settings-view.active::-webkit-scrollbar-track {
+      background: var(--bg-tertiary);
+      border-radius: 3px;
+    }
+
+    .workflow-view.active::-webkit-scrollbar-thumb,
+    .phases-view.active::-webkit-scrollbar-thumb,
+    .settings-view.active::-webkit-scrollbar-thumb {
+      background: var(--text-muted);
+      border-radius: 3px;
+    }
+
+    .workflow-view.active::-webkit-scrollbar-thumb:hover,
+    .phases-view.active::-webkit-scrollbar-thumb:hover,
+    .settings-view.active::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-blue);
+    }
+
+    /* Virtual Scroll Spacer */
+    .history-virtual-spacer {
+      position: relative;
+    }
+
+    /* Scroll to Top Button */
+    .scroll-to-top-btn {
+      position: absolute;
+      bottom: 20px;
+      right: 20px;
+      padding: 10px 16px;
+      background: var(--accent-blue);
+      color: white;
+      border: none;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(10px);
+      transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+      z-index: 10;
+    }
+
+    .scroll-to-top-btn.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .scroll-to-top-btn:hover {
+      background: #4c9aed;
+    }
+
+    /* New Entries Banner */
+    .new-entries-banner {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      font-weight: 500;
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-10px);
+      transition: opacity 0.2s, visibility 0.2s, transform 0.2s;
+      z-index: 10;
+    }
+
+    .new-entries-banner.visible {
+      opacity: 1;
+      visibility: visible;
+      transform: translateY(0);
+    }
+
+    .new-entries-banner button {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 4px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .new-entries-banner button:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Responsive - Compact header for narrow screens */
+    @media (max-width: 768px) {
+      .header {
+        padding: 8px 16px;
+      }
+
+      .header-content {
+        flex-direction: row;
+        gap: 8px;
+      }
+
+      /* Logo: icon only */
+      .logo-icon {
+        width: 32px;
+        height: 32px;
+      }
+
+      .logo-icon .icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      .logo > div:last-child {
+        display: none;
+      }
+
+      /* Tabs: icons only */
+      .tabs {
+        margin-left: 8px;
+        gap: 2px;
+        flex: 1;
+        justify-content: center;
+      }
+
+      .tab {
+        padding: 8px;
+        font-size: 0;
+      }
+
+      .tab .icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* Header actions: icon only */
+      .header-actions .btn {
+        padding: 8px;
+        font-size: 0;
+      }
+
+      .header-actions .btn .icon {
+        width: 18px;
+        height: 18px;
+      }
+
+      /* Main content */
+      .main {
+        padding: 16px;
+      }
+
+      .action-buttons {
+        flex-direction: column;
+      }
+
+      .action-buttons .btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    /* Utility classes */
+    .loading-placeholder {
+      color: var(--text-muted);
+      text-align: center;
+      padding: 48px;
+    }
+
+    .modal-sm {
+      max-width: 400px;
+    }
+
+    .icon-orange {
+      color: var(--accent-orange);
+    }
+
+    .icon-yellow {
+      color: var(--accent-yellow);
+    }
+
+    .text-sm {
+      font-size: 12px;
+    }
+
+    .pl-4 {
+      padding-left: 4px;
+    }
+
+    .text-muted-center {
+      color: var(--text-muted);
+      text-align: center;
+    }
+
+    .text-error {
+      color: var(--accent-red);
+    }
+
+    .shutdown-success {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      gap: 20px;
+    }
+
+    .shutdown-success .icon-success {
+      width: 64px;
+      height: 64px;
+      color: var(--accent-green);
+    }
+
+    .shutdown-success h2 {
+      color: var(--text-primary);
+    }
+
+    .shutdown-success p {
+      color: var(--text-secondary);
+    }
+
+    /* Intervention Section */
+    .intervention-section {
+      border-color: rgba(210, 153, 34, 0.4);
+    }
+
+    .intervention-section .settings-section-title {
+      color: var(--accent-yellow);
+    }
+
+    .intervention-section .settings-section-title .icon {
+      color: var(--accent-yellow);
+    }
+
+    .intervention-form {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .intervention-form-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .intervention-form-group {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .intervention-form-group label {
+      display: block;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+
+    .intervention-form-group select,
+    .intervention-form-group input {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-sm);
+      color: var(--text-primary);
+      font-size: 14px;
+    }
+
+    .intervention-form-group select:focus,
+    .intervention-form-group input:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+
+    .intervention-warning {
+      background: rgba(210, 153, 34, 0.1);
+      border: 1px solid rgba(210, 153, 34, 0.3);
+      border-radius: var(--radius-sm);
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--accent-yellow);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .intervention-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding-top: 8px;
+    }
+
+    .btn-warning {
+      background: var(--accent-yellow);
+      border-color: var(--accent-yellow);
+      color: var(--bg-primary);
+    }
+
+    .btn-warning:hover {
+      background: #c08c1f;
+      border-color: #c08c1f;
+    }
+
+    /* Polling indicator */
+    .polling-indicator {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--text-muted);
+    }
+
+    .polling-dot {
+      width: 6px;
+      height: 6px;
+      background: var(--text-muted);
+      border-radius: 50%;
+    }
+
+    .polling-indicator.active .polling-dot {
+      background: var(--accent-green);
+      animation: pollingPulse 2s infinite;
+    }
+
+    .polling-indicator.error .polling-dot {
+      background: var(--accent-red);
+      animation: pollingPulse 1s infinite;
+    }
+
+    .polling-indicator.stopped .polling-dot {
+      background: var(--text-muted);
+      animation: none;
+    }
+
+    @keyframes pollingPulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* History entry rollback status */
+    .history-entry.rollback::before {
+      background: var(--accent-purple);
+      border-color: var(--accent-purple);
+    }
+
+    .history-entry-status.rollback {
+      background: rgba(163, 113, 247, 0.15);
+      color: var(--accent-purple);
+    }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg class="icon icon-xl" viewBox="0 0 24 24" stroke="white">
+            <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/>
+            <rect x="9" y="3" width="6" height="4" rx="1"/>
+            <path d="M9 12h6"/>
+            <path d="M9 16h6"/>
+          </svg>
+        </div>
+        <div>
+          <div class="logo-text">Phase Manager</div>
+          <div class="logo-sub">ux-contract-dev</div>
+        </div>
+      </div>
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('workflow')" id="tab-workflow">
+          <svg class="icon icon-sm" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          ワークフロー
+        </button>
+        <button class="tab" onclick="switchTab('history')" id="tab-history">
+          <svg class="icon icon-sm" viewBox="0 0 24 24">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          履歴
+        </button>
+        <button class="tab" onclick="switchTab('flow')" id="tab-flow">
+          <svg class="icon icon-sm" viewBox="0 0 24 24">
+            <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
+          </svg>
+          開発フロー
+        </button>
+        <button class="tab" onclick="switchTab('settings')" id="tab-settings">
+          <svg class="icon icon-sm" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          設定
+        </button>
+      </div>
+      <div class="header-actions">
+        <div class="polling-indicator active" id="polling-indicator">
+          <span class="polling-dot"></span>
+          <span id="polling-text">自動更新中</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- Workflow View (Stepper UI) -->
+    <div class="workflow-view active" id="workflow-view">
+      <div class="stepper" id="stepper-container">
+        <p class="loading-placeholder">読み込み中...</p>
+      </div>
+    </div>
+
+    <!-- History View -->
+    <div class="history-view" id="history-view">
+      <div class="history-scroll-container" id="history-scroll-container">
+        <div class="new-entries-banner" id="new-entries-banner">
+          <span>🔔 新着 <span id="new-entries-count">0</span>件</span>
+          <button type="button" onclick="showNewEntries()">表示</button>
+        </div>
+        <div class="history-timeline" id="history-container">
+          <p class="loading-placeholder">読み込み中...</p>
+        </div>
+        <button type="button" class="scroll-to-top-btn" id="scroll-to-top-btn" onclick="scrollToLatest()">
+          <svg class="icon icon-sm" viewBox="0 0 24 24">
+            <polyline points="18 15 12 9 6 15"/>
+          </svg>
+          最新へ
+        </button>
+      </div>
+    </div>
+
+    <!-- Flow View -->
+    <div class="flow-view" id="flow-view">
+      <div class="flow-layout">
+        <nav class="flow-toc" id="flow-toc"></nav>
+        <div class="flow-content" id="flow-content">
+          <p class="loading-placeholder">読み込み中...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings View -->
+    <div class="settings-view" id="settings-view">
+      <div class="settings-section">
+        <h2 class="settings-section-title">
+          <svg class="icon" viewBox="0 0 24 24">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="16" x2="12" y2="12"/>
+            <line x1="12" y1="8" x2="12.01" y2="8"/>
+          </svg>
+          バージョン情報
+        </h2>
+        <div class="settings-content">
+          <p>Phase Manager v1.0.0</p>
+          <p class="text-muted">ux-contract-dev フェーズ管理ツール（モニターモード）</p>
+        </div>
+      </div>
+
+      <div class="settings-section">
+        <h2 class="settings-section-title">
+          <svg class="icon" viewBox="0 0 24 24">
+            <polyline points="23 4 23 10 17 10"/>
+            <polyline points="1 20 1 14 7 14"/>
+            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+          </svg>
+          手動更新
+        </h2>
+        <div class="settings-content">
+          <p class="text-muted">ポーリングが動作しない場合に使用してください。</p>
+          <button class="btn" onclick="refreshState(); refreshHistory(); showToast('更新しました', 'success');" style="margin-top: 12px;">
+            <svg class="icon" viewBox="0 0 24 24">
+              <polyline points="23 4 23 10 17 10"/>
+              <polyline points="1 20 1 14 7 14"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+            </svg>
+            手動更新
+          </button>
+        </div>
+      </div>
+
+      <div class="settings-section intervention-section">
+        <h2 class="settings-section-title">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          緊急介入（通常は使用しない）
+        </h2>
+        <div class="settings-content">
+          <div class="intervention-warning">
+            <svg class="icon" viewBox="0 0 24 24">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" y1="16" x2="12" y2="12"/>
+              <line x1="12" y1="8" x2="12.01" y2="8"/>
+            </svg>
+            <span>この機能はAIが履歴を正しく記録できなかった場合の緊急用です。通常のフェーズ遷移はAIが自動的に行います。</span>
+          </div>
+          <div class="intervention-form">
+            <div class="intervention-form-row">
+              <div class="intervention-form-group">
+                <label for="intervene-status">操作</label>
+                <select id="intervene-status" onchange="updatePhaseSelectForStatus()">
+                  <option value="complete">完了（現在フェーズを完了にする）</option>
+                  <option value="reject">差し戻し（現在フェーズを差し戻す）</option>
+                  <option value="rollback">ロールバック（任意のフェーズに戻る）</option>
+                </select>
+              </div>
+            </div>
+            <div class="intervention-form-row">
+              <div class="intervention-form-group">
+                <label for="intervene-phase">対象フェーズ</label>
+                <select id="intervene-phase">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+              <div class="intervention-form-group" id="intervene-target-group" style="display: none;">
+                <label for="intervene-target">差し戻し先</label>
+                <select id="intervene-target">
+                  <!-- Populated dynamically -->
+                </select>
+              </div>
+            </div>
+            <div class="intervention-form-row">
+              <div class="intervention-form-group" style="flex: 2;">
+                <label for="intervene-comment">理由（必須）</label>
+                <input type="text" id="intervene-comment" placeholder="介入理由を入力してください">
+              </div>
+            </div>
+            <div class="intervention-actions">
+              <button class="btn btn-warning" onclick="executeIntervention()">
+                <svg class="icon" viewBox="0 0 24 24">
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
+                介入を実行
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="settings-section danger-zone">
+        <h2 class="settings-section-title">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/>
+            <line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>
+          Danger Zone
+        </h2>
+        <div class="settings-content">
+          <div class="danger-item">
+            <div class="danger-item-info">
+              <h3>状態をリセット</h3>
+              <p>全てのフェーズ進捗をリセットし、初期状態に戻します。履歴は保持されます。</p>
+            </div>
+            <button class="btn btn-danger-outline" onclick="showResetConfirm()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              リセット
+            </button>
+          </div>
+          <div class="danger-item">
+            <div class="danger-item-info">
+              <h3>サーバーを停止</h3>
+              <p>Phase Manager サーバーを終了します。再度使用する場合は start スクリプトを実行してください。</p>
+            </div>
+            <button class="btn btn-danger-outline" onclick="showShutdownConfirm()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                <line x1="12" y1="2" x2="12" y2="12"/>
+              </svg>
+              停止
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Prompt Modal -->
+  <div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span class="modal-title">
+          <svg class="icon" viewBox="0 0 24 24">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span id="modal-title-text">プロンプト</span>
+        </span>
+        <button class="modal-close" onclick="closeModal()">
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="prompt-content" id="prompt-content">読み込み中...</div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn" onclick="closeModal()">
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+          閉じる
+        </button>
+        <button class="btn btn-primary" onclick="copyPromptFromModal()">
+          <svg class="icon" viewBox="0 0 24 24">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
+          クリップボードにコピー
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shutdown Modal -->
+  <div class="modal-overlay" id="shutdown-modal" onclick="closeShutdownModal(event)">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span class="modal-title">
+          <svg class="icon icon-orange" viewBox="0 0 24 24">
+            <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+            <line x1="12" y1="2" x2="12" y2="12"/>
+          </svg>
+          サーバー停止
+        </span>
+        <button class="modal-close" onclick="closeShutdownModal()">
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="shutdown-confirm">
+          <h3>
+            <svg class="icon icon-lg icon-yellow" viewBox="0 0 24 24">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            サーバーを停止しますか？
+          </h3>
+          <p>Phase Manager を終了します。<br>再度使用する場合は start スクリプトを実行してください。</p>
+          <div class="shutdown-confirm-buttons">
+            <button class="btn" onclick="closeShutdownModal()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              キャンセル
+            </button>
+            <button class="btn btn-shutdown" onclick="shutdownServer()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+                <line x1="12" y1="2" x2="12" y2="12"/>
+              </svg>
+              停止する
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Reset Modal -->
+  <div class="modal-overlay" id="reset-modal" onclick="closeResetModal(event)">
+    <div class="modal modal-sm" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <span class="modal-title">
+          <svg class="icon icon-orange" viewBox="0 0 24 24">
+            <path d="M3 6h18"/>
+            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+            <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+          </svg>
+          状態をリセット
+        </span>
+        <button class="modal-close" onclick="closeResetModal()">
+          <svg class="icon" viewBox="0 0 24 24">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="shutdown-confirm">
+          <h3>
+            <svg class="icon icon-lg icon-yellow" viewBox="0 0 24 24">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            状態をリセットしますか？
+          </h3>
+          <p>全てのフェーズ進捗が初期状態に戻ります。<br>履歴は保持されます。</p>
+          <div class="shutdown-confirm-buttons">
+            <button class="btn" onclick="closeResetModal()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+              キャンセル
+            </button>
+            <button class="btn btn-danger" onclick="executeReset()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M3 6h18"/>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>
+                <path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+              </svg>
+              リセットする
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <script>
+    let state = null;
+    let historyData = null;
+    let currentPrompt = '';
+    let pollInterval = null;
+    let lastKnownTimestamp = null;
+
+    // Virtual scroll constants and state
+    const ENTRY_HEIGHT = 120;  // Fixed height per entry (px)
+    const ENTRY_GAP = 16;      // Gap between entries (px)
+    const OVERSCAN = 3;        // Extra entries to render above/below viewport
+    const SCROLL_THRESHOLD = 100; // Threshold for showing "scroll to top" button
+    let pendingNewEntries = 0;  // Count of new entries waiting to be shown
+    let historyScrollHandler = null;  // Reference to scroll handler for cleanup
+
+    // Initialize
+    async function init() {
+      // Safari fallback for scrollbar-gutter
+      if (!CSS.supports('scrollbar-gutter', 'stable')) {
+        document.documentElement.style.paddingRight = '15px';
+      }
+      await refreshState();
+      startPolling();
+    }
+
+    // Polling indicator state management
+    function updatePollingIndicator(status) {
+      const indicator = document.getElementById('polling-indicator');
+      const text = document.getElementById('polling-text');
+      if (!indicator || !text) return;
+
+      indicator.classList.remove('active', 'error', 'stopped');
+
+      switch (status) {
+        case 'active':
+          indicator.classList.add('active');
+          text.textContent = '自動更新中';
+          break;
+        case 'error':
+          indicator.classList.add('error');
+          text.textContent = '接続エラー';
+          break;
+        case 'stopped':
+          indicator.classList.add('stopped');
+          text.textContent = '更新停止';
+          break;
+      }
+    }
+
+    // Polling mechanism
+    let consecutiveErrors = 0;
+    const MAX_CONSECUTIVE_ERRORS = 3;
+
+    function startPolling() {
+      if (pollInterval) return;
+      updatePollingIndicator('active');
+      consecutiveErrors = 0;
+
+      pollInterval = setInterval(async () => {
+        try {
+          const res = await fetch(`/api/poll?since=${lastKnownTimestamp || ''}`);
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const data = await res.json();
+
+          // Reset error count on success
+          if (consecutiveErrors > 0) {
+            consecutiveErrors = 0;
+            updatePollingIndicator('active');
+          }
+
+          if (data.updated) {
+            lastKnownTimestamp = data.latestTimestamp;
+            await refreshState();
+            await refreshHistory(true);  // Pass true to indicate polling update
+            // Toast is shown conditionally by refreshHistory now
+          }
+        } catch (e) {
+          console.error('Polling error:', e);
+          consecutiveErrors++;
+          if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+            updatePollingIndicator('error');
+          }
+        }
+      }, 3000);
+    }
+
+    function stopPolling() {
+      if (pollInterval) {
+        clearInterval(pollInterval);
+        pollInterval = null;
+      }
+      updatePollingIndicator('stopped');
+    }
+
+    // Fetch state
+    async function refreshState() {
+      try {
+        const res = await fetch('/api/state');
+        state = await res.json();
+        renderStepper();
+        populateInterventionForm();
+      } catch (e) {
+        showToast('状態の取得に失敗しました', 'error');
+      }
+    }
+
+    // Fetch history with smart update handling
+    async function refreshHistory(isPollingUpdate = false) {
+      try {
+        const res = await fetch('/api/history');
+        const newHistoryData = await res.json();
+
+        // Check if there are new entries
+        const prevCount = historyData?.history?.length || 0;
+        const newCount = newHistoryData?.history?.length || 0;
+        const addedCount = newCount - prevCount;
+
+        // Get scroll position
+        const scrollContainer = document.getElementById('history-scroll-container');
+        const isScrolledDown = scrollContainer && scrollContainer.scrollTop > SCROLL_THRESHOLD;
+
+        // Update data
+        historyData = newHistoryData;
+
+        if (isPollingUpdate && addedCount > 0 && isScrolledDown) {
+          // User is scrolled down - show banner instead of re-rendering
+          showNewEntriesBanner(addedCount);
+        } else {
+          // Either not polling update, or user is at top - render immediately
+          hideNewEntriesBanner();
+          renderHistory();
+        }
+      } catch (e) {
+        showToast('履歴の取得に失敗しました', 'error');
+      }
+    }
+
+    // Render Stepper UI
+    function renderStepper() {
+      if (!state) return;
+
+      const container = document.getElementById('stepper-container');
+      const currentPhase = state.phases.find(p => p.current);
+      if (!currentPhase) {
+        container.innerHTML = '<p class="text-muted-center">フェーズが見つかりません</p>';
+        return;
+      }
+
+      const currentIndex = state.phases.findIndex(p => p.current);
+      const previousPhase = currentIndex > 0 ? state.phases[currentIndex - 1] : null;
+
+      // Build HTML
+      let html = '';
+
+      // Previous phase (if exists) - read-only, no onclick
+      if (previousPhase) {
+        html += `
+          <div class="stepper-step previous">
+            <div class="stepper-label">
+              <span class="stepper-label-icon previous">✓</span>
+              前のステップ
+            </div>
+            <div class="stepper-phase-name">
+              ${previousPhase.name}
+              <span class="stepper-tool-badge ${previousPhase.tool.toLowerCase()}">${previousPhase.tool}</span>
+            </div>
+            <div class="stepper-phase-id">${previousPhase.id}</div>
+          </div>
+          <div class="stepper-connector">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          </div>
+        `;
+      }
+
+      // Current phase
+      const toolClass = currentPhase.tool.toLowerCase();
+      html += `
+        <div class="stepper-step current">
+          <div class="stepper-label">
+            <span class="stepper-label-icon current">●</span>
+            現在のステップ
+          </div>
+          <div class="stepper-phase-name">
+            ${currentPhase.name}
+            <span class="stepper-tool-badge ${toolClass}">${currentPhase.tool}</span>
+          </div>
+          <div class="stepper-phase-id">${currentPhase.id}</div>
+          <div class="stepper-actions">
+            <button class="btn btn-primary" onclick="showPrompt()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14 2 14 8 20 8"/>
+              </svg>
+              プロンプトを表示
+            </button>
+            <button class="btn btn-success" onclick="copyPrompt()">
+              <svg class="icon" viewBox="0 0 24 24">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              コピー
+            </button>
+          </div>
+        </div>
+      `;
+
+      // Next options
+      const nextPhases = currentPhase.next || [];
+      const rejectPhases = currentPhase.reject || [];
+
+      if (nextPhases.length > 0 || rejectPhases.length > 0) {
+        html += `
+          <div class="stepper-connector">
+            <svg class="icon" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
+          </div>
+          <div class="stepper-label pl-4">
+            <span class="stepper-label-icon next">?</span>
+            次の遷移先
+          </div>
+          <div class="next-options">
+        `;
+
+        // OK options (next phases) - read-only info display
+        for (const nextId of nextPhases) {
+          const nextPhase = state.phases.find(p => p.id === nextId);
+          if (nextPhase) {
+            html += `
+              <div class="next-option ok" style="cursor: default;">
+                <div class="next-option-info">
+                  <span class="next-option-label ok">OK → 次へ進む</span>
+                  <span class="next-option-name">${nextPhase.name}</span>
+                </div>
+                <svg class="icon next-option-arrow" viewBox="0 0 24 24">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </div>
+            `;
+          }
+        }
+
+        // NG options (reject/rollback phases) - read-only info display
+        for (const rejectId of rejectPhases) {
+          const rejectPhase = state.phases.find(p => p.id === rejectId);
+          if (rejectPhase) {
+            html += `
+              <div class="next-option ng" style="cursor: default;">
+                <div class="next-option-info">
+                  <span class="next-option-label ng">NG → 差し戻し</span>
+                  <span class="next-option-name">${rejectPhase.name}</span>
+                </div>
+                <svg class="icon next-option-arrow" viewBox="0 0 24 24">
+                  <line x1="5" y1="12" x2="19" y2="12"/>
+                  <polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </div>
+            `;
+          }
+        }
+
+        html += '</div>';
+      }
+
+      container.innerHTML = html;
+    }
+
+    // Throttle utility function
+    function throttle(fn, delay) {
+      let lastCall = 0;
+      let timeoutId = null;
+      return function(...args) {
+        const now = Date.now();
+        const remaining = delay - (now - lastCall);
+        if (remaining <= 0) {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+            timeoutId = null;
+          }
+          lastCall = now;
+          fn.apply(this, args);
+        } else if (!timeoutId) {
+          timeoutId = setTimeout(() => {
+            lastCall = Date.now();
+            timeoutId = null;
+            fn.apply(this, args);
+          }, remaining);
+        }
+      };
+    }
+
+    // Scroll to latest (top) of history
+    function scrollToLatest() {
+      const scrollContainer = document.getElementById('history-scroll-container');
+      if (scrollContainer) {
+        scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+      hideNewEntriesBanner();
+    }
+
+    // Show new entries banner
+    function showNewEntriesBanner(count) {
+      pendingNewEntries = count;
+      const banner = document.getElementById('new-entries-banner');
+      const countSpan = document.getElementById('new-entries-count');
+      if (banner && countSpan) {
+        countSpan.textContent = count;
+        banner.classList.add('visible');
+      }
+    }
+
+    // Hide new entries banner
+    function hideNewEntriesBanner() {
+      pendingNewEntries = 0;
+      const banner = document.getElementById('new-entries-banner');
+      if (banner) {
+        banner.classList.remove('visible');
+      }
+    }
+
+    // Show new entries (called from banner button)
+    function showNewEntries() {
+      hideNewEntriesBanner();
+      scrollToLatest();
+      renderHistory();
+    }
+
+    // Update scroll-to-top button visibility
+    function updateScrollToTopButton() {
+      const scrollContainer = document.getElementById('history-scroll-container');
+      const button = document.getElementById('scroll-to-top-btn');
+      if (scrollContainer && button) {
+        if (scrollContainer.scrollTop > SCROLL_THRESHOLD) {
+          button.classList.add('visible');
+        } else {
+          button.classList.remove('visible');
+        }
+      }
+    }
+
+    // Setup history scroll handler
+    function setupHistoryScrollHandler() {
+      const scrollContainer = document.getElementById('history-scroll-container');
+      if (!scrollContainer) return;
+
+      // Remove old handler if exists
+      if (historyScrollHandler) {
+        scrollContainer.removeEventListener('scroll', historyScrollHandler);
+      }
+
+      // Create throttled handler
+      historyScrollHandler = throttle(() => {
+        updateScrollToTopButton();
+        updateVisibleHistoryEntries();
+      }, 16);
+
+      scrollContainer.addEventListener('scroll', historyScrollHandler);
+    }
+
+    // Calculate visible range for virtual scroll
+    function getVisibleRange(scrollTop, containerHeight, totalEntries) {
+      const entryTotalHeight = ENTRY_HEIGHT + ENTRY_GAP;
+      const startIndex = Math.max(0, Math.floor(scrollTop / entryTotalHeight) - OVERSCAN);
+      const visibleCount = Math.ceil(containerHeight / entryTotalHeight) + 2 * OVERSCAN;
+      const endIndex = Math.min(totalEntries - 1, startIndex + visibleCount);
+      return { startIndex, endIndex };
+    }
+
+    // Update visible history entries (virtual scroll)
+    function updateVisibleHistoryEntries() {
+      const scrollContainer = document.getElementById('history-scroll-container');
+      const entriesContainer = document.getElementById('history-entries-container');
+      if (!scrollContainer || !entriesContainer || !historyData?.history?.length) return;
+
+      const entries = [...historyData.history].reverse();
+      const { startIndex, endIndex } = getVisibleRange(
+        scrollContainer.scrollTop,
+        scrollContainer.clientHeight,
+        entries.length
+      );
+
+      // Update visible entries
+      renderVisibleEntries(entries, startIndex, endIndex);
+    }
+
+    // Render only visible entries
+    function renderVisibleEntries(entries, startIndex, endIndex) {
+      const entriesContainer = document.getElementById('history-entries-container');
+      if (!entriesContainer) return;
+
+      const entryTotalHeight = ENTRY_HEIGHT + ENTRY_GAP;
+      const totalHeight = entries.length * entryTotalHeight - ENTRY_GAP;
+      const topOffset = startIndex * entryTotalHeight;
+      const bottomOffset = totalHeight - (endIndex + 1) * entryTotalHeight + ENTRY_GAP;
+
+      let html = '';
+
+      // Top spacer
+      if (topOffset > 0) {
+        html += `<div style="height: ${topOffset}px;"></div>`;
+      }
+
+      // Visible entries
+      for (let i = startIndex; i <= endIndex; i++) {
+        const entry = entries[i];
+        let statusClass, statusLabel;
+        if (entry.status === 'complete') {
+          statusClass = 'complete';
+          statusLabel = '完了';
+        } else if (entry.status === 'rollback') {
+          statusClass = 'rollback';
+          statusLabel = 'ロールバック';
+        } else {
+          statusClass = 'reject';
+          statusLabel = '差し戻し';
+        }
+        const timestamp = entry.timestamp ? new Date(entry.timestamp).toLocaleString('ja-JP') : '';
+
+        html += `
+          <div class="history-entry ${statusClass}" data-status="${entry.status}" data-index="${i}" style="height: ${ENTRY_HEIGHT}px; box-sizing: border-box;">
+            <div class="history-entry-timestamp">${timestamp}</div>
+            <div class="history-entry-header">
+              <span class="history-entry-phase">${entry.phaseName || entry.phase}</span>
+              <span class="history-entry-status ${statusClass}">${statusLabel}</span>
+            </div>
+            ${entry.comment ? `<div class="history-entry-comment" data-tippy-content="${escapeHtml(entry.comment)}">${escapeHtml(entry.comment)}</div>` : ''}
+            ${entry.target ? `<div class="history-entry-meta"><span>→ ${entry.target}</span></div>` : ''}
+          </div>
+        `;
+      }
+
+      // Bottom spacer
+      if (bottomOffset > 0) {
+        html += `<div style="height: ${bottomOffset}px;"></div>`;
+      }
+
+      entriesContainer.innerHTML = html;
+
+      // Mark truncated comments and initialize Tippy tooltips
+      entriesContainer.querySelectorAll('.history-entry-comment').forEach(el => {
+        if (el.scrollHeight > el.clientHeight) {
+          el.classList.add('truncated');
+          // Initialize Tippy only for truncated comments
+          if (typeof tippy !== 'undefined' && !el._tippy) {
+            tippy(el, {
+              content: el.dataset.tippyContent,
+              trigger: 'mouseenter click',
+              interactive: true,
+              maxWidth: 400,
+              placement: 'auto',
+              animation: 'shift-away',
+              theme: 'dark',
+              appendTo: document.body
+            });
+          }
+        }
+      });
+
+      // Update SVG for visible range
+      requestAnimationFrame(() => generateHistorySvgForRange(entries, startIndex, endIndex));
+    }
+
+    // Generate SVG for visible range only
+    function generateHistorySvgForRange(entries, startIndex, endIndex) {
+      const svgContainer = document.getElementById('history-svg-container');
+      const entriesContainer = document.getElementById('history-entries-container');
+      if (!svgContainer || !entriesContainer) return;
+
+      const entryElements = entriesContainer.querySelectorAll('.history-entry');
+      if (entryElements.length === 0) return;
+
+      const scrollContainer = document.getElementById('history-scroll-container');
+      const entryTotalHeight = ENTRY_HEIGHT + ENTRY_GAP;
+      const totalHeight = entries.length * entryTotalHeight - ENTRY_GAP;
+      const centerX = 12;
+      const dotRadius = 6;
+      const arrowSize = 10;
+
+      const colors = {
+        complete: getComputedStyle(document.documentElement).getPropertyValue('--accent-green').trim(),
+        reject: getComputedStyle(document.documentElement).getPropertyValue('--accent-yellow').trim(),
+        rollback: getComputedStyle(document.documentElement).getPropertyValue('--accent-purple').trim(),
+        default: getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim(),
+        line: getComputedStyle(document.documentElement).getPropertyValue('--border-color').trim(),
+        arrow: getComputedStyle(document.documentElement).getPropertyValue('--text-muted').trim()
+      };
+
+      let svgContent = '';
+
+      // Calculate positions for all entries (not just visible ones) for correct SVG
+      for (let i = startIndex; i <= endIndex; i++) {
+        const entry = entries[i];
+        const y = i * entryTotalHeight + 20; // 20px from top of entry
+        const color = colors[entry.status] || colors.default;
+
+        // Draw dot
+        svgContent += `<circle cx="${centerX}" cy="${y}" r="${dotRadius}" fill="${color}"/>`;
+
+        // Draw arrow and line (except for last entry in total list)
+        if (i < entries.length - 1) {
+          const arrowTipY = y + dotRadius + 4;
+          const arrowBottomY = arrowTipY + arrowSize;
+          const nextDotY = (i + 1) * entryTotalHeight + 20;
+
+          svgContent += `<polygon points="${centerX},${arrowTipY} ${centerX - arrowSize/2},${arrowBottomY} ${centerX + arrowSize/2},${arrowBottomY}" fill="${colors.arrow}"/>`;
+          svgContent += `<line x1="${centerX}" y1="${arrowBottomY}" x2="${centerX}" y2="${nextDotY}" stroke="${colors.line}" stroke-width="2"/>`;
+        }
+      }
+
+      svgContainer.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="${totalHeight}" viewBox="0 0 24 ${totalHeight}" style="position: absolute; top: 0; left: 0;">
+          ${svgContent}
+        </svg>
+      `;
+    }
+
+    // Render History Timeline with SVG (virtual scroll enabled)
+    function renderHistory() {
+      const container = document.getElementById('history-container');
+      const scrollContainer = document.getElementById('history-scroll-container');
+
+      if (!historyData || !historyData.history || historyData.history.length === 0) {
+        container.innerHTML = `
+          <div class="history-empty">
+            <svg class="icon" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+            <p>履歴がまだありません</p>
+            <p class="text-sm">AIがフェーズ完了/差し戻し時に記録します</p>
+          </div>
+        `;
+        return;
+      }
+
+      // Reverse to show newest first
+      const entries = [...historyData.history].reverse();
+
+      // Create grid layout with SVG placeholder and entries container
+      container.innerHTML = `
+        <div class="history-timeline-svg" id="history-svg-container"></div>
+        <div class="history-entries" id="history-entries-container"></div>
+      `;
+
+      // Setup scroll handler
+      setupHistoryScrollHandler();
+
+      // Calculate initial visible range and render
+      const containerHeight = scrollContainer ? scrollContainer.clientHeight : 600;
+      const { startIndex, endIndex } = getVisibleRange(0, containerHeight, entries.length);
+      renderVisibleEntries(entries, startIndex, endIndex);
+    }
+
+    // Legacy generateHistorySvg - kept for compatibility but uses new function
+    function generateHistorySvg(entries) {
+      if (!entries || entries.length === 0) return;
+      const scrollContainer = document.getElementById('history-scroll-container');
+      const containerHeight = scrollContainer ? scrollContainer.clientHeight : 600;
+      const { startIndex, endIndex } = getVisibleRange(0, containerHeight, entries.length);
+      generateHistorySvgForRange(entries, startIndex, endIndex);
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Intervention functions
+    function updatePhaseSelectForStatus() {
+      const status = document.getElementById('intervene-status').value;
+      const phaseSelect = document.getElementById('intervene-phase');
+      const targetGroup = document.getElementById('intervene-target-group');
+
+      if (!state) return;
+
+      // Clear existing options
+      phaseSelect.innerHTML = '';
+
+      if (status === 'rollback') {
+        // Rollback: show all phases
+        targetGroup.style.display = 'none';
+        for (const phase of state.phases) {
+          const option = document.createElement('option');
+          option.value = phase.id;
+          option.textContent = `${phase.name} (${phase.id})`;
+          phaseSelect.appendChild(option);
+        }
+      } else if (status === 'reject') {
+        // Reject: current phase only, show target select
+        targetGroup.style.display = 'block';
+        const currentPhase = state.phases.find(p => p.current);
+        if (currentPhase) {
+          const option = document.createElement('option');
+          option.value = currentPhase.id;
+          option.textContent = `${currentPhase.name} (${currentPhase.id})`;
+          phaseSelect.appendChild(option);
+
+          // Populate target select with reject options
+          const targetSelect = document.getElementById('intervene-target');
+          targetSelect.innerHTML = '';
+          for (const rejectId of currentPhase.reject || []) {
+            const rejectPhase = state.phases.find(p => p.id === rejectId);
+            if (rejectPhase) {
+              const targetOpt = document.createElement('option');
+              targetOpt.value = rejectPhase.id;
+              targetOpt.textContent = `${rejectPhase.name} (${rejectPhase.id})`;
+              targetSelect.appendChild(targetOpt);
+            }
+          }
+        }
+      } else {
+        // Complete: current phase only
+        targetGroup.style.display = 'none';
+        const currentPhase = state.phases.find(p => p.current);
+        if (currentPhase) {
+          const option = document.createElement('option');
+          option.value = currentPhase.id;
+          option.textContent = `${currentPhase.name} (${currentPhase.id})`;
+          phaseSelect.appendChild(option);
+        }
+      }
+    }
+
+    function populateInterventionForm() {
+      updatePhaseSelectForStatus();
+    }
+
+    async function executeIntervention() {
+      const status = document.getElementById('intervene-status').value;
+      const phase = document.getElementById('intervene-phase').value;
+      const comment = document.getElementById('intervene-comment').value.trim();
+      const target = document.getElementById('intervene-target')?.value;
+
+      if (!comment) {
+        showToast('理由を入力してください', 'error');
+        return;
+      }
+
+      const body = { phase, status, comment };
+      if (status === 'reject' && target) {
+        body.target = target;
+      }
+
+      try {
+        const res = await fetch('/api/intervene', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const data = await res.json();
+        if (data.error) {
+          showToast(data.error, 'error');
+          return;
+        }
+
+        showToast('介入を実行しました', 'success');
+        document.getElementById('intervene-comment').value = '';
+        await refreshState();
+        await refreshHistory();
+      } catch (e) {
+        showToast('介入の実行に失敗しました', 'error');
+      }
+    }
+
+    // Show prompt
+    async function showPrompt() {
+      if (!state) return;
+      const currentPhase = state.phases.find(p => p.current);
+      if (!currentPhase) return;
+
+      try {
+        const res = await fetch(`/api/prompt/${currentPhase.id}`);
+        const data = await res.json();
+
+        if (data.error) {
+          showToast('プロンプトが見つかりません', 'error');
+          return;
+        }
+
+        currentPrompt = data.content;
+        document.getElementById('modal-title-text').textContent = `${currentPhase.name} プロンプト`;
+        document.getElementById('prompt-content').textContent = data.content;
+        document.getElementById('modal-overlay').classList.add('active');
+      } catch (e) {
+        showToast('プロンプトの取得に失敗しました', 'error');
+      }
+    }
+
+    // Copy prompt (button)
+    async function copyPrompt() {
+      if (!state) return;
+      const currentPhase = state.phases.find(p => p.current);
+      if (!currentPhase) return;
+
+      try {
+        const res = await fetch(`/api/prompt/${currentPhase.id}`);
+        const data = await res.json();
+
+        if (data.error) {
+          showToast('プロンプトが見つかりません', 'error');
+          return;
+        }
+
+        await navigator.clipboard.writeText(data.content);
+        showToast('プロンプトをコピーしました', 'success');
+      } catch (e) {
+        showToast('コピーに失敗しました', 'error');
+      }
+    }
+
+    // Copy prompt (modal)
+    async function copyPromptFromModal() {
+      try {
+        await navigator.clipboard.writeText(currentPrompt);
+        showToast('プロンプトをコピーしました', 'success');
+        closeModal();
+      } catch (e) {
+        showToast('コピーに失敗しました', 'error');
+      }
+    }
+
+    // Close modal
+    function closeModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('modal-overlay').classList.remove('active');
+    }
+
+    // Reset
+    function showResetConfirm() {
+      document.getElementById('reset-modal').classList.add('active');
+    }
+
+    function closeResetModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('reset-modal').classList.remove('active');
+    }
+
+    async function executeReset() {
+      try {
+        closeResetModal();
+        await fetch('/api/reset', { method: 'POST' });
+        await refreshState();
+        showToast('リセットしました', 'success');
+      } catch (e) {
+        showToast('リセットに失敗しました', 'error');
+      }
+    }
+
+    // Shutdown
+    function showShutdownConfirm() {
+      document.getElementById('shutdown-modal').classList.add('active');
+    }
+
+    function closeShutdownModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById('shutdown-modal').classList.remove('active');
+    }
+
+    async function shutdownServer() {
+      try {
+        showToast('サーバーを停止しています...', 'info');
+        await fetch('/api/shutdown', { method: 'POST' });
+        document.body.innerHTML = `
+          <div class="shutdown-success">
+            <svg class="icon icon-success" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" fill="none">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22 4 12 14.01 9 11.01"/>
+            </svg>
+            <h2>サーバーが停止しました</h2>
+            <p>このタブは閉じて構いません</p>
+          </div>
+        `;
+      } catch (e) {
+        showToast('サーバーの停止に失敗しました', 'error');
+      }
+    }
+
+    // Toast
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+
+      const icons = {
+        success: '<svg class="icon" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>',
+        error: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>',
+        info: '<svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>',
+      };
+
+      toast.innerHTML = `${icons[type] || icons.info}<span>${message}</span>`;
+      container.appendChild(toast);
+
+      setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+      }, 3000);
+    }
+
+    // ESC to close modal
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeModal();
+        closeShutdownModal();
+      }
+    });
+
+    // Tab switching
+    let flowLoaded = false;
+
+    function switchTab(tab) {
+      const workflowView = document.getElementById('workflow-view');
+      const historyView = document.getElementById('history-view');
+      const flowView = document.getElementById('flow-view');
+      const settingsView = document.getElementById('settings-view');
+      const tabWorkflow = document.getElementById('tab-workflow');
+      const tabHistory = document.getElementById('tab-history');
+      const tabFlow = document.getElementById('tab-flow');
+      const tabSettings = document.getElementById('tab-settings');
+
+      // Remove all active states
+      workflowView.classList.remove('active');
+      historyView.classList.remove('active');
+      flowView.classList.remove('active');
+      settingsView.classList.remove('active');
+      tabWorkflow.classList.remove('active');
+      tabHistory.classList.remove('active');
+      tabFlow.classList.remove('active');
+      tabSettings.classList.remove('active');
+
+      if (tab === 'workflow') {
+        workflowView.classList.add('active');
+        tabWorkflow.classList.add('active');
+      } else if (tab === 'history') {
+        historyView.classList.add('active');
+        tabHistory.classList.add('active');
+        refreshHistory();
+      } else if (tab === 'flow') {
+        flowView.classList.add('active');
+        tabFlow.classList.add('active');
+        if (!flowLoaded) {
+          loadFlowContent();
+          flowLoaded = true;
+        }
+      } else if (tab === 'settings') {
+        settingsView.classList.add('active');
+        tabSettings.classList.add('active');
+      }
+    }
+
+    async function loadFlowContent() {
+      try {
+        const res = await fetch('/api/docs/flow');
+        const data = await res.json();
+
+        if (data.error) {
+          document.getElementById('flow-content').innerHTML =
+            '<p class="text-error">ドキュメントが見つかりません</p>';
+          return;
+        }
+
+        const html = renderMarkdown(data.content);
+        document.getElementById('flow-content').innerHTML = html;
+        generateToc();
+        await renderMermaidDiagrams();
+        flowLoaded = true;
+      } catch (e) {
+        document.getElementById('flow-content').innerHTML =
+          '<p class="text-error">読み込みに失敗しました</p>';
+      }
+    }
+
+    function generateToc() {
+      // 見出しにIDを付与（tocbotが必要とする）
+      const content = document.getElementById('flow-content');
+      const headings = content.querySelectorAll('h1, h2, h3');
+      headings.forEach((h, i) => {
+        if (!h.id) h.id = 'heading-' + i;
+      });
+
+      // 既存のtocbotを破棄
+      tocbot.destroy();
+
+      // タイトルを先に追加
+      const toc = document.getElementById('flow-toc');
+      toc.innerHTML = '<div class="flow-toc-title">目次</div><nav class="toc-nav"></nav>';
+
+      // tocbot初期化（コンテンツ領域独立スクロール対応）
+      tocbot.init({
+        tocSelector: '.toc-nav',
+        contentSelector: '.flow-content',
+        headingSelector: 'h1, h2, h3',
+        hasInnerContainers: true,
+        scrollSmooth: true,
+        scrollSmoothOffset: -24,
+        headingsOffset: 24,
+        scrollSmoothDuration: 300,
+        collapseDepth: 6,
+        orderedList: false,
+        scrollContainer: '.flow-content',
+      });
+    }
+
+    function renderMarkdown(md) {
+      // marked.js でパース（GFM有効：表・タスクリスト対応）
+      marked.setOptions({
+        gfm: true,
+        breaks: true,
+        headerIds: true
+      });
+      return marked.parse(md);
+    }
+
+    // Mermaid初期化
+    mermaid.initialize({
+      startOnLoad: false,
+      theme: 'dark',
+      themeVariables: {
+        darkMode: true,
+        background: '#161b22',
+        primaryColor: '#58a6ff',
+        primaryTextColor: '#f0f6fc',
+        primaryBorderColor: '#30363d',
+        lineColor: '#8b949e',
+        secondaryColor: '#21262d',
+        tertiaryColor: '#0d1117'
+      }
+    });
+
+    // Mermaid図を描画
+    async function renderMermaidDiagrams() {
+      const content = document.getElementById('flow-content');
+      // marked.js は ```mermaid を <pre><code class="language-mermaid">...</code></pre> に変換
+      const mermaidBlocks = content.querySelectorAll('pre code.language-mermaid');
+
+      for (let i = 0; i < mermaidBlocks.length; i++) {
+        const block = mermaidBlocks[i];
+        const code = block.textContent;
+        const pre = block.parentElement;
+
+        try {
+          const { svg } = await mermaid.render('mermaid-' + i, code);
+          const div = document.createElement('div');
+          div.className = 'mermaid-diagram';
+          div.innerHTML = svg;
+          pre.replaceWith(div);
+        } catch (e) {
+          console.error('Mermaid render error:', e);
+          // エラー時は元のコードブロックを表示
+          pre.style.borderLeft = '3px solid var(--accent-red)';
+        }
+      }
+    }
+
+    // Initialize
+    init();
+  </script>
+</body>
+</html>
