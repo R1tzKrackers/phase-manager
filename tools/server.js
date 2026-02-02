@@ -327,7 +327,7 @@ app.get('/api/state', (req, res) => {
   });
 });
 
-// API: プロンプト取得
+// API: プロンプト取得（開始用）
 app.get('/api/prompt/:phaseId', (req, res) => {
   const { phaseId } = req.params;
   const config = loadConfig();
@@ -340,6 +340,79 @@ app.get('/api/prompt/:phaseId', (req, res) => {
 
   content = expandVariables(content, config, manifest);
   res.json({ content });
+});
+
+// API: 再開用プロンプト取得
+app.get('/api/resume-prompt/:phaseId', (req, res) => {
+  const { phaseId } = req.params;
+  const config = loadConfig();
+  const manifest = loadFrameworkManifest();
+  const history = loadHistory();
+  const phases = getPhases();
+  const derivedState = deriveStateFromHistory();
+
+  // 現在フェーズプロンプト取得
+  let phasePrompt = loadPrompt(phaseId);
+  if (!phasePrompt) {
+    return res.status(404).json({ error: 'Prompt not found' });
+  }
+  phasePrompt = expandVariables(phasePrompt, config, manifest);
+
+  // 履歴サマリー生成
+  let historySummary = '';
+  if (history.length > 0) {
+    const latest = history[history.length - 1];
+    const latestPhase = phases.find(p => p.id === latest.phase);
+    historySummary = `**最終フェーズ**: ${latest.phase}${latestPhase ? ` (${latestPhase.name})` : ''}
+**最終状態**: ${latest.status}
+**最終コメント**: ${latest.comment || '(なし)'}
+**最終更新**: ${latest.timestamp}`;
+  } else {
+    historySummary = '**履歴**: なし（新規プロジェクト）';
+  }
+
+  // 現在フェーズ情報
+  const currentPhase = phases.find(p => p.id === phaseId);
+  const currentPhaseInfo = `**現在フェーズ**: ${phaseId}${currentPhase ? ` (${currentPhase.name})` : ''}
+**状態**: ${history.length > 0 && history[history.length - 1].status === 'reject' ? '修正待ち' : '作業待ち'}`;
+
+  // 再開用プロンプト構築
+  const resumePrompt = `## セッション再開
+
+あなたはコンテキストを失った状態で再開している。
+**報告のみを行え。作業は開始するな。**
+
+---
+
+### 履歴サマリー
+
+${historySummary}
+
+${currentPhaseInfo}
+
+---
+
+### 禁止事項
+
+- 作業の自動開始
+- 成果物の再作成
+- ユーザー指示なしの判断
+
+---
+
+### 指示
+
+1. 現在フェーズの成果物の有無を確認せよ
+2. 状態を報告せよ
+3. ユーザーの指示を待て
+
+---
+
+### 参考: 現在フェーズのプロンプト
+
+${phasePrompt}`;
+
+  res.json({ content: resumePrompt });
 });
 
 // API: 履歴取得
