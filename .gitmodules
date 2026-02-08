@@ -1,0 +1,12 @@
+[submodule "framework/cli-contract-dev"]
+	path = framework/cli-contract-dev
+	url = https://github.com/R1tzKrackers/cli-contract-dev.git
+[submodule "framework/spa-contract-dev"]
+	path = framework/spa-contract-dev
+	url = https://github.com/R1tzKrackers/spa-contract-dev.git
+[submodule "framework/api-contract-dev"]
+	path = framework/api-contract-dev
+	url = https://github.com/R1tzKrackers/api-contract-dev.git
+[submodule "framework/ux-contract-dev"]
+	path = framework/ux-contract-dev
+	url = https://github.com/R1tzKrackers/ux-contract-dev.git
